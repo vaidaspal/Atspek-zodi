@@ -1,2 +1,474 @@
-<!DOCTYPE html><html lang="lt"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atspėk žodį</title><style>*{box-sizing:border-box;font-family:Arial,sans-serif}body{margin:0;background:#121212;color:#fff;text-align:center}.container{max-width:900px;margin:auto;padding:20px}.hidden{display:none}button,input{padding:12px;border-radius:6px}button{border:none;cursor:pointer;transition:.2s}button:hover{transform:translateY(-2px);filter:brightness(1.1)}button:active{transform:scale(.96)}.board{margin:20px auto;width:max-content}.row{display:flex}.cell{width:55px;height:55px;margin:3px;border:2px solid #444;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;transition:background-color .5s}.active-cell{border:3px solid #fff;box-shadow:0 0 10px #fff,0 0 20px #fff}.flip{animation:flip .45s ease}.green{background:#4caf50}.yellow{background:#fbc02d;color:#000}.gray{background:#616161}@keyframes flip{0%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}@keyframes victory{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}.keyboard button{width:40px;height:50px;margin:2px}.top10,.record{background:#1e1e1e;padding:15px;border-radius:10px;margin-top:15px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center}.modal-content{background:#222;padding:20px;border-radius:12px;max-width:500px;width:90%}table{width:100%;border-collapse:collapse}td,th{border:1px solid #333;padding:8px}</style></head><body><div class="container"><h1>Atspėk žodį</h1><button onclick="showStats()">📊 Statistika</button><div id="login"><h3>Įvesk vardą</h3><input id="playerName"><br><br><button onclick="startGame()">Pradėti</button></div><div id="game" class="hidden"><h2>Sveikas, <span id="player"></span></h2><div>⏱️ <span id="timer">00:00</span></div><div id="board" class="board"></div><button onclick="submitGuess()">SPĖTI</button><div id="message"></div><div id="keyboard"></div></div><div class="record"><h3>🏆 Dienos rekordas</h3><div id="dailyRecord"></div></div><div class="top10"><h3>TOP 10</h3><table><tbody id="leaderboard"></tbody></table></div></div><div id="statsModal" class="modal"><div class="modal-content"><h2>📊 Statistika</h2><div id="statsContent"></div><canvas id="statsChart" width="350" height="180"></canvas><button onclick="closeStats()">Uždaryti</button></div></div><script>let words=[],secretWord='',currentRow=0,currentGuess=['','','','',''],activePosition=0,gameFinished=false,startTime,timerInterval;fetch('words.json').then(r=>r.json()).then(d=>{words=d.words;secretWord=getDailyWord(words);createBoard();createKeyboard();loadLeaderboard();updateDailyRecord();updateCurrentRow();});function getDailyWord(w){const t=new Date().toISOString().split('T')[0];let h=0;for(let c of t){h=((h<<5)-h)+c.charCodeAt(0);h|=0;}return w[Math.abs(h)%w.length]}function stats(){return JSON.parse(localStorage.getItem('wordleStats'))||[]}function getTodayKey(){return new Date().toISOString().split('T')[0]}function startGame(){const p=playerName.value.trim();if(!p)return;localStorage.setItem('playerName',p);player.textContent=p;login.classList.add('hidden');game.classList.remove('hidden');startTime=Date.now();timerInterval=setInterval(()=>{let e=Math.floor((Date.now()-startTime)/1000);timer.textContent=String(Math.floor(e/60)).padStart(2,'0')+':'+String(e%60).padStart(2,'0')},1000)}function createBoard(){for(let r=0;r<6;r++){let row=document.createElement('div');row.className='row';for(let c=0;c<5;c++){let cell=document.createElement('div');cell.className='cell';cell.id=`r${r}c${c}`;cell.addEventListener('click',()=>{if(r!==currentRow||gameFinished)return;activePosition=c;updateCurrentRow();});row.appendChild(cell)}board.appendChild(row)}}function updateCurrentRow(){for(let i=0;i<5;i++){let cell=document.getElementById(`r${currentRow}c${i}`);if(!cell)continue;cell.classList.remove('active-cell');if(!cell.classList.contains('green')&&!cell.classList.contains('yellow')&&!cell.classList.contains('gray'))cell.textContent=currentGuess[i]||'';}let a=document.getElementById(`r${currentRow}c${activePosition}`);if(a)a.classList.add('active-cell');}
-function evaluateGuess(g,s){const r=Array(5).fill('gray');const rem=s.split('');for(let i=0;i<5;i++){if(g[i]===s[i]){r[i]='green';rem[i]=null}}for(let i=0;i<5;i++){if(r[i]=='green')continue;let p=rem.indexOf(g[i]);if(p!=-1){r[i]='yellow';rem[p]=null}}return r}function submitGuess(){const g=currentGuess.join('');if(g.length!==5||!words.includes(g))return;let colors=evaluateGuess(g,secretWord);for(let i=0;i<5;i++){let cell=document.getElementById(`r${currentRow}c${i}`);cell.textContent=g[i];cell.className='cell flip '+colors[i];updateKey(g[i],colors[i]);}if(g===secretWord){board.style.animation='victory .7s';finish(true);return;}currentRow++;currentGuess=['','','','',''];activePosition=0;updateCurrentRow();if(currentRow===6)finish(false)}function finish(win){clearInterval(timerInterval);gameFinished=true;let t=Math.floor((Date.now()-startTime)/1000);let s=stats();s.push({player:localStorage.getItem('playerName'),time:t,win,dateKey:getTodayKey()});localStorage.setItem('wordleStats',JSON.stringify(s));loadLeaderboard();updateDailyRecord();message.innerHTML=win?'🎉 Atspėjai!':'❌ Žodis buvo '+secretWord}function loadLeaderboard(){let wins=stats().filter(x=>x.win).sort((a,b)=>a.time-b.time).slice(0,10);leaderboard.innerHTML='<tr><th>#</th><th>Žaidėjas</th><th>Laikas</th></tr>'+wins.map((x,i)=>`<tr><td>${i+1}</td><td>${x.player}</td><td>${x.time}s</td></tr>`).join('')}function updateDailyRecord(){let r=stats().filter(x=>x.win&&x.dateKey===getTodayKey()).sort((a,b)=>a.time-b.time)[0];dailyRecord.innerHTML=r?`🥇 ${r.player} - ${r.time}s`:'Kol kas nėra rezultatų'}function showStats(){let p=localStorage.getItem('playerName')||'';let s=stats().filter(x=>x.player===p);let wins=s.filter(x=>x.win).length;let total=s.reduce((a,b)=>a+b.time,0);statsContent.innerHTML=`<p><b>${p}</b></p><p>Pergalės: ${wins}</p><p>Pralaimėjimai: ${s.length-wins}</p><p>Bendras laikas: ${total}s</p>`;statsModal.style.display='flex'}function closeStats(){statsModal.style.display='none'}function addLetter(l){if(gameFinished)return;if(activePosition>4)return;currentGuess[activePosition]=l;if(activePosition<4)activePosition++;updateCurrentRow();}function backspace(){if(gameFinished)return;currentGuess[activePosition]='';if(activePosition>0){activePosition--;}currentGuess[activePosition]='';updateCurrentRow();}function createKeyboard(){['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'].forEach(r=>{let d=document.createElement('div');r.split('').forEach(l=>{let b=document.createElement('button');b.id='k'+l;b.textContent=l;b.onclick=()=>addLetter(l);d.appendChild(b)});keyboard.appendChild(d)});let e=document.createElement('button');e.textContent='ENTER';e.onclick=submitGuess;keyboard.appendChild(e);let b=document.createElement('button');b.textContent='⌫';b.onclick=backspace;keyboard.appendChild(b)}function updateKey(l,c){let k=document.getElementById('k'+l);if(k)k.classList.add(c)}document.addEventListener('keydown',e=>{if(game.classList.contains('hidden'))return;if(e.key==='ArrowLeft'){if(activePosition>0){activePosition--;updateCurrentRow();}return;}if(e.key==='ArrowRight'){if(activePosition<4){activePosition++;updateCurrentRow();}return;}if(e.key==='Enter'){submitGuess();return;}if(e.key==='Backspace'){backspace();return;}let l=e.key.toUpperCase();if(/^[A-Z]$/.test(l))addLetter(l);});</script></body></html>
+<!DOCTYPE html>
+<html lang="lt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Atspėk žodį</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        font-family: Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #121212;
+        color: #fff;
+        text-align: center;
+      }
+      .container {
+        max-width: 900px;
+        margin: auto;
+        padding: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      button,
+      input {
+        padding: 12px;
+        border-radius: 6px;
+      }
+      button {
+        border: none;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+      }
+      button:active {
+        transform: scale(0.96);
+      }
+      .board {
+        margin: 20px auto;
+        width: max-content;
+      }
+      .row {
+        display: flex;
+      }
+      .cell {
+        width: 55px;
+        height: 55px;
+        margin: 3px;
+        border: 2px solid #444;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: bold;
+        transition: background-color 0.5s;
+      }
+      .active-cell {
+        border: 3px solid #fff;
+        box-shadow:
+          0 0 10px #fff,
+          0 0 20px #fff;
+      }
+      .flip {
+        animation: flip 0.45s ease;
+      }
+      .green {
+        background: #4caf50;
+      }
+      .yellow {
+        background: #fbc02d;
+        color: #000;
+      }
+      .gray {
+        background: #616161;
+      }
+      @keyframes flip {
+        0% {
+          transform: rotateX(90deg);
+        }
+        100% {
+          transform: rotateX(0);
+        }
+      }
+      @keyframes victory {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.06);
+        }
+      }
+      .keyboard button {
+        width: 40px;
+        height: 50px;
+        margin: 2px;
+      }
+      .top10,
+      .record {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 15px;
+      }
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        background: #222;
+        padding: 20px;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      td,
+      th {
+        border: 1px solid #333;
+        padding: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Atspėk žodį</h1>
+      <button onclick="showStats()">📊 Statistika</button>
+      <div id="login">
+        <h3>Įvesk vardą</h3>
+        <input id="playerName" /><br /><br /><button onclick="startGame()">
+          Pradėti
+        </button>
+      </div>
+      <div id="game" class="hidden">
+        <h2>Sveikas, <span id="player"></span></h2>
+        <div>⏱️ <span id="timer">00:00</span></div>
+        <div id="board" class="board"></div>
+        <button onclick="submitGuess()">SPĖTI</button>
+        <div id="message"></div>
+        <div id="keyboard"></div>
+      </div>
+      <div class="record">
+        <h3>🏆 Dienos rekordas</h3>
+        <div id="dailyRecord"></div>
+      </div>
+      <div class="top10">
+        <h3>TOP 10</h3>
+        <table>
+          <tbody id="leaderboard"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="statsModal" class="modal">
+      <div class="modal-content">
+        <h2>📊 Statistika</h2>
+        <div id="statsContent"></div>
+        <button onclick="closeStats()">Uždaryti</button>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      const SUPABASE_URL = "https://mbzbuhgehyntppzofbkb.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_oxk-FKOFpQrWW--Jnn4rZQ_lzjjugpu";
+      const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      let words = [],
+        secretWord = "",
+        currentRow = 0,
+        currentGuess = ["", "", "", "", ""],
+        activePosition = 0,
+        gameFinished = false,
+        startTime,
+        timerInterval;
+      fetch("words.json")
+        .then((r) => r.json())
+        .then((d) => {
+          words = d.words;
+          secretWord = getDailyWord(words);
+          createBoard();
+          createKeyboard();
+          refreshStatistics();
+          updateCurrentRow();
+        });
+      function getDailyWord(w) {
+        const t = new Date().toISOString().split("T")[0];
+        let h = 0;
+        for (let c of t) {
+          h = (h << 5) - h + c.charCodeAt(0);
+          h |= 0;
+        }
+        return w[Math.abs(h) % w.length];
+      }
+      function getTodayKey() {
+        return new Date().toISOString().split("T")[0];
+      }
+      function startGame() {
+        const p = playerName.value.trim();
+        if (!p) return;
+        localStorage.setItem("playerName", p);
+        player.textContent = p;
+        login.classList.add("hidden");
+        game.classList.remove("hidden");
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+          let e = Math.floor((Date.now() - startTime) / 1000);
+          timer.textContent =
+            String(Math.floor(e / 60)).padStart(2, "0") +
+            ":" +
+            String(e % 60).padStart(2, "0");
+        }, 1000);
+      }
+      function createBoard() {
+        for (let r = 0; r < 6; r++) {
+          let row = document.createElement("div");
+          row.className = "row";
+          for (let c = 0; c < 5; c++) {
+            let cell = document.createElement("div");
+            cell.className = "cell";
+            cell.id = `r${r}c${c}`;
+            cell.addEventListener("click", () => {
+              if (r !== currentRow || gameFinished) return;
+              activePosition = c;
+              updateCurrentRow();
+            });
+            row.appendChild(cell);
+          }
+          board.appendChild(row);
+        }
+      }
+      function updateCurrentRow() {
+        for (let i = 0; i < 5; i++) {
+          let cell = document.getElementById(`r${currentRow}c${i}`);
+          if (!cell) continue;
+          cell.classList.remove("active-cell");
+          if (
+            !cell.classList.contains("green") &&
+            !cell.classList.contains("yellow") &&
+            !cell.classList.contains("gray")
+          )
+            cell.textContent = currentGuess[i] || "";
+        }
+        let a = document.getElementById(`r${currentRow}c${activePosition}`);
+        if (a) a.classList.add("active-cell");
+      }
+      function evaluateGuess(g, s) {
+        const r = Array(5).fill("gray");
+        const rem = s.split("");
+        for (let i = 0; i < 5; i++) {
+          if (g[i] === s[i]) {
+            r[i] = "green";
+            rem[i] = null;
+          }
+        }
+        for (let i = 0; i < 5; i++) {
+          if (r[i] == "green") continue;
+          let p = rem.indexOf(g[i]);
+          if (p != -1) {
+            r[i] = "yellow";
+            rem[p] = null;
+          }
+        }
+        return r;
+      }
+      function submitGuess() {
+        const g = currentGuess.join("");
+        if (g.length !== 5 || !words.includes(g)) return;
+        let colors = evaluateGuess(g, secretWord);
+        for (let i = 0; i < 5; i++) {
+          let cell = document.getElementById(`r${currentRow}c${i}`);
+          cell.textContent = g[i];
+          cell.className = "cell flip " + colors[i];
+          updateKey(g[i], colors[i]);
+        }
+        if (g === secretWord) {
+          board.style.animation = "victory .7s";
+          finish(true);
+          return;
+        }
+        currentRow++;
+        currentGuess = ["", "", "", "", ""];
+        activePosition = 0;
+        updateCurrentRow();
+        if (currentRow === 6) finish(false);
+      }
+      function finish(win) {
+        clearInterval(timerInterval);
+        gameFinished = true;
+        let t = Math.floor((Date.now() - startTime) / 1000);
+        const playerNameSaved = localStorage.getItem("playerName");
+        message.textContent = win
+          ? "🎉 Atspėjai!"
+          : "❌ Žodis buvo " + secretWord;
+        // Rezultatą įrašome į bendrą Supabase duomenų bazę.
+        db.from("game_results").insert({
+          player: playerNameSaved,
+          seconds: t,
+          won: win,
+          played_on: getTodayKey(),
+        }).then(async ({ error }) => {
+          if (error) {
+            console.error("Nepavyko išsaugoti rezultato:", error);
+            message.textContent += " (Nepavyko išsaugoti statistikos – bandykite vėliau.)";
+            return;
+          }
+          await refreshStatistics();
+        });
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (ch) => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[ch]);
+      }
+
+      async function refreshStatistics() {
+        await Promise.all([loadLeaderboard(), updateDailyRecord()]);
+      }
+
+      async function loadLeaderboard() {
+        const { data, error } = await db
+          .from("game_results")
+          .select("player, seconds")
+          .eq("won", true)
+          .order("seconds", { ascending: true })
+          .limit(10);
+
+        if (error) {
+          console.error("Nepavyko įkelti TOP 10:", error);
+          leaderboard.innerHTML = "<tr><td>Statistika laikinai nepasiekiama</td></tr>";
+          return;
+        }
+
+        leaderboard.innerHTML =
+          "<tr><th>#</th><th>Žaidėjas</th><th>Laikas</th></tr>" +
+          (data || []).map((x, i) =>
+            `<tr><td>${i + 1}</td><td>${escapeHtml(x.player)}</td><td>${x.seconds}s</td></tr>`
+          ).join("");
+        if (!data || data.length === 0) {
+          leaderboard.innerHTML += "<tr><td colspan='3'>Dar nėra rezultatų</td></tr>";
+        }
+      }
+
+      async function updateDailyRecord() {
+        const { data, error } = await db
+          .from("game_results")
+          .select("player, seconds")
+          .eq("won", true)
+          .eq("played_on", getTodayKey())
+          .order("seconds", { ascending: true })
+          .limit(1);
+
+        if (error) {
+          console.error("Nepavyko įkelti dienos rekordo:", error);
+          dailyRecord.textContent = "Statistika laikinai nepasiekiama";
+          return;
+        }
+        const record = data && data[0];
+        dailyRecord.textContent = record
+          ? `🥇 ${record.player} - ${record.seconds}s`
+          : "Kol kas nėra rezultatų";
+      }
+
+      async function showStats() {
+        const p = localStorage.getItem("playerName") || "";
+        if (!p) {
+          statsContent.textContent = "Pirmiausia įvesk savo vardą ir sužaisk žaidimą.";
+          statsModal.style.display = "flex";
+          return;
+        }
+
+        statsContent.textContent = "Kraunama statistika...";
+        statsModal.style.display = "flex";
+        const { data, error } = await db
+          .from("game_results")
+          .select("seconds, won")
+          .eq("player", p);
+
+        if (error) {
+          console.error("Nepavyko įkelti asmeninės statistikos:", error);
+          statsContent.textContent = "Nepavyko įkelti statistikos. Bandyk dar kartą.";
+          return;
+        }
+
+        const results = data || [];
+        const wins = results.filter((x) => x.won).length;
+        const total = results.reduce((sum, x) => sum + x.seconds, 0);
+        statsContent.innerHTML = `<p><b>${escapeHtml(p)}</b></p><p>Sužaista: ${results.length}</p><p>Pergalės: ${wins}</p><p>Pralaimėjimai: ${results.length - wins}</p><p>Bendras laikas: ${total}s</p>`;
+      }
+      function closeStats() {
+        statsModal.style.display = "none";
+      }
+      function addLetter(l) {
+        if (gameFinished) return;
+        if (activePosition > 4) return;
+        currentGuess[activePosition] = l;
+        if (activePosition < 4) activePosition++;
+        updateCurrentRow();
+      }
+      function backspace() {
+        if (gameFinished) return;
+        currentGuess[activePosition] = "";
+        if (activePosition > 0) {
+          activePosition--;
+        }
+        currentGuess[activePosition] = "";
+        updateCurrentRow();
+      }
+      function createKeyboard() {
+        ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].forEach((r) => {
+          let d = document.createElement("div");
+          r.split("").forEach((l) => {
+            let b = document.createElement("button");
+            b.id = "k" + l;
+            b.textContent = l;
+            b.onclick = () => addLetter(l);
+            d.appendChild(b);
+          });
+          keyboard.appendChild(d);
+        });
+        let e = document.createElement("button");
+        e.textContent = "ENTER";
+        e.onclick = submitGuess;
+        keyboard.appendChild(e);
+        let b = document.createElement("button");
+        b.textContent = "⌫";
+        b.onclick = backspace;
+        keyboard.appendChild(b);
+      }
+      function updateKey(l, c) {
+        let k = document.getElementById("k" + l);
+        if (k) k.classList.add(c);
+      }
+      document.addEventListener("keydown", (e) => {
+        if (game.classList.contains("hidden")) return;
+        if (e.key === "ArrowLeft") {
+          if (activePosition > 0) {
+            activePosition--;
+            updateCurrentRow();
+          }
+          return;
+        }
+        if (e.key === "ArrowRight") {
+          if (activePosition < 4) {
+            activePosition++;
+            updateCurrentRow();
+          }
+          return;
+        }
+        if (e.key === "Enter") {
+          submitGuess();
+          return;
+        }
+        if (e.key === "Backspace") {
+          backspace();
+          return;
+        }
+        let l = e.key.toUpperCase();
+        if (/^[A-Z]$/.test(l)) addLetter(l);
+      });
+    </script>
+  </body>
+</html>
