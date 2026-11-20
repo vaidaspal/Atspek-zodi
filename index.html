@@ -78,14 +78,20 @@
       .gray {
         background: #616161;
       }
-      @keyframes flip {
-        0% {
-          transform: rotateX(90deg);
-        }
-        100% {
-          transform: rotateX(0);
-        }
-      }
+      @keyframes shake {
+
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+  100% { transform: translateX(0); }
+
+}
+
+.shake{
+  animation: shake .45s ease;
+}
       @keyframes victory {
         0%,
         100% {
@@ -303,12 +309,18 @@
           ? "🎉 Atspėjai!"
           : "❌ Žodis buvo " + secretWord;
         // Rezultatą įrašome į bendrą Supabase duomenų bazę.
-        db.from("game_results").insert({
-          player: playerNameSaved,
-          seconds: t,
-          won: win,
-          played_on: getTodayKey(),
-        }).then(async ({ error }) => {
+       db.from("game_results").insert({
+  player: playerNameSaved,
+  seconds: t,
+  won: win,
+  played_on: getTodayKey(),
+
+  attempts: win
+      ? currentRow + 1
+      : 6,
+
+  word_length: 5
+}).then(async ({ error }) => {
           if (error) {
             console.error("Nepavyko išsaugoti rezultato:", error);
             message.textContent += " (Nepavyko išsaugoti statistikos – bandykite vėliau.)";
