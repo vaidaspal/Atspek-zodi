@@ -396,7 +396,7 @@
         statsModal.style.display = "flex";
         const { data, error } = await db
           .from("game_results")
-          .select("seconds, won")
+          .select("*")
           .eq("player", p);
 
         if (error) {
@@ -406,9 +406,78 @@
         }
 
         const results = data || [];
-        const wins = results.filter((x) => x.won).length;
-        const total = results.reduce((sum, x) => sum + x.seconds, 0);
-        statsContent.innerHTML = `<p><b>${escapeHtml(p)}</b></p><p>Sužaista: ${results.length}</p><p>Pergalės: ${wins}</p><p>Pralaimėjimai: ${results.length - wins}</p><p>Bendras laikas: ${total}s</p>`;
+        const wins =
+results.filter(
+  (x) => x.won
+).length;
+
+const total =
+results.reduce(
+  (sum, x) =>
+    sum + x.seconds,
+  0
+);
+
+const bestTime =
+wins > 0
+  ?
+  Math.min(
+    ...results
+      .filter(
+        x => x.won
+      )
+      .map(
+        x => x.seconds
+      )
+  )
+  :
+  "-";
+
+const averageTime =
+wins > 0
+  ?
+  Math.round(
+      total / wins
+    )
+  :
+  0;
+        statsContent.innerHTML =
+
+`
+<p>
+<b>${escapeHtml(p)}</b>
+</p>
+
+<p>
+Sužaista:
+${results.length}
+</p>
+
+<p>
+Pergalės:
+${wins}
+</p>
+
+<p>
+Pralaimėjimai:
+${results.length - wins}
+</p>
+
+<p>
+Geriausias laikas:
+${bestTime}s
+</p>
+
+<p>
+Vidutinis laikas:
+${averageTime}s
+</p>
+
+<p>
+Bendras laikas:
+${total}s
+</p>
+`;
       }
       function closeStats() {
         statsModal.style.display = "none";
