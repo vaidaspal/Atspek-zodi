@@ -163,7 +163,7 @@
 
  <br><br>
 
- <button onclick="login()">
+ <button onclick="loginPlayer()">
    Prisijungti
  </button>
 
@@ -279,7 +279,7 @@ async function registerPlayer() {
     );
 }
 
-async function login() {
+async function loginPlayer() {
 
     const name =
         playerName.value.trim();
@@ -356,13 +356,13 @@ function startGame()  {
 
  player.textContent = p;
 
- login.classList.add(
-   "hidden"
- );
+ document
+    .getElementById("login")
+    .classList.add("hidden");
 
- game.classList.remove(
-   "hidden"
- );
+document
+    .getElementById("game")
+    .classList.remove("hidden");
 
  startTime = Date.now();
 
