@@ -144,12 +144,34 @@
       <h1>Atspėk žodį</h1>
       <button onclick="showStats()">📊 Statistika</button>
       <div id="login">
-        <h3>Įvesk vardą</h3>
-        <input id="playerName" /><br /><br /><button onclick="startGame()">
-          Pradėti
-        </button>
-      </div>
-      <div id="game" class="hidden">
+
+ <h3>Prisijungimas</h3>
+
+ <input
+   id="playerName"
+   placeholder="Vardas"
+ />
+
+ <br><br>
+
+ <input
+   id="playerPin"
+   type="password"
+   maxlength="4"
+   placeholder="4 skaitmenų PIN"
+ />
+
+ <br><br>
+
+ <button onclick="login()">
+   Prisijungti
+ </button>
+
+ <button onclick="registerPlayer()">
+   Registruotis
+ </button>
+
+</div>      <div id="game" class="hidden">
         <h2>Sveikas, <span id="player"></span></h2>
         <div>⏱️ <span id="timer">00:00</span></div>
         <div id="board" class="board"></div>
@@ -209,24 +231,160 @@
         return w[Math.abs(h) % w.length];
       }
       function getTodayKey() {
-        return new Date().toISOString().split("T")[0];
-      }
-      function startGame() {
-        const p = playerName.value.trim();
-        if (!p) return;
-        localStorage.setItem("playerName", p);
-        player.textContent = p;
-        login.classList.add("hidden");
-        game.classList.remove("hidden");
-        startTime = Date.now();
-        timerInterval = setInterval(() => {
-          let e = Math.floor((Date.now() - startTime) / 1000);
-          timer.textContent =
-            String(Math.floor(e / 60)).padStart(2, "0") +
-            ":" +
-            String(e % 60).padStart(2, "0");
-        }, 1000);
-      }
+ return new Date().toISOString().split("T")[0];
+}
+
+async function registerPlayer() {
+
+    const name =
+        playerName.value.trim();
+
+    const pin =
+        playerPin.value.trim();
+
+    if (!name || pin.length !== 4) {
+
+        alert("Įvesk vardą ir 4 skaitmenų PIN");
+
+        return;
+    }
+
+    const { error } =
+
+    await db
+
+    .from("players")
+
+    .insert({
+
+        name: name,
+
+        pin: pin
+
+    });
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Toks vardas jau naudojamas"
+        );
+
+        return;
+    }
+
+    alert(
+        "Registracija sėkminga"
+    );
+}
+
+async function login() {
+
+    const name =
+        playerName.value.trim();
+
+    const pin =
+        playerPin.value.trim();
+
+    if (!name || !pin) {
+
+        alert(
+            "Įvesk vardą ir PIN"
+        );
+
+        return;
+    }
+
+    const { data, error } =
+
+    await db
+
+    .from("players")
+
+    .select("*")
+
+    .eq("name", name)
+
+    .eq("pin", pin)
+
+    .limit(1);
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "Prisijungimo klaida"
+        );
+
+        return;
+    }
+
+    if (!data || data.length === 0) {
+
+        alert(
+            "Neteisingas vardas arba PIN"
+        );
+
+        return;
+    }
+
+    localStorage.setItem(
+        "playerName",
+        name
+    );
+
+    startGame();
+}
+
+function startGame()  {
+
+ const p =
+ localStorage.getItem(
+   "playerName"
+ );
+
+ if (!p) {
+
+   alert(
+     "Pirmiausia prisijunk"
+   );
+
+   return;
+ }
+
+ player.textContent = p;
+
+ login.classList.add(
+   "hidden"
+ );
+
+ game.classList.remove(
+   "hidden"
+ );
+
+ startTime = Date.now();
+
+ timerInterval = setInterval(() => {
+
+   let e =
+   Math.floor(
+     (Date.now() - startTime) / 1000
+   );
+
+   timer.textContent =
+     String(
+       Math.floor(e / 60)
+     ).padStart(2, "0") +
+     ":" +
+     String(
+       e % 60
+     ).padStart(2, "0");
+
+ }, 1000);
+
+}
       function createBoard() {
         for (let r = 0; r < 6; r++) {
           let row = document.createElement("div");
