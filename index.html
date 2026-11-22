@@ -330,12 +330,49 @@ async function loginPlayer() {
         return;
     }
 
-    localStorage.setItem(
-        "playerName",
-        name
+    const { data: playedToday } =
+
+await db
+
+.from("game_results")
+
+.select("id")
+
+.eq(
+    "player",
+    name
+)
+
+.eq(
+    "played_on",
+    getTodayKey()
+)
+
+.eq(
+    "word_length",
+    5
+)
+
+.limit(1);
+
+if(
+    playedToday &&
+    playedToday.length > 0
+){
+
+    alert(
+      "Šiandien jau žaidei.Sugrįžk rytoj"
     );
 
-    startGame();
+    return;
+}
+
+localStorage.setItem(
+    "playerName",
+    name
+);
+
+startGame();
 }
 
 function startGame()  {
