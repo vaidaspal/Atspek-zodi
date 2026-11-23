@@ -1,0 +1,19 @@
+* { box-sizing:border-box; font-family:Arial,sans-serif; }
+body { margin:0; background:#121212; color:#fff; text-align:center; }
+.container { max-width:900px; margin:auto; padding:20px; }
+.hidden { display:none; }
+button,input { padding:12px; border-radius:6px; }
+button { border:none; cursor:pointer; transition:.2s; }
+button:hover { transform:translateY(-2px); filter:brightness(1.1); }
+button:active { transform:scale(.96); }
+.board { margin:20px auto; width:max-content; }
+.row { display:flex; }
+.cell { width:55px; height:55px; margin:3px; border:2px solid #444; display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:bold; transition:background-color .5s; }
+.active-cell { border:3px solid #fff; box-shadow:0 0 10px #fff,0 0 20px #fff; }
+.flip { animation:flip .45s ease; }
+.green { background:#4caf50; }
+.yellow { background:#fbc02d; color:#000; }
+.gray { background:#616161; }
+@keyframes flip { 0%{transform:rotateX(90deg)} 100%{transform:rotateX(0)} }
+@keyframes shake {0%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}100%{transform:translateX(0)}}
+.shake{animation:shake .45s ease;}
